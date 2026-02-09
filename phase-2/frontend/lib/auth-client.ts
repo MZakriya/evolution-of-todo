@@ -169,26 +169,52 @@ export async function getCurrentUser(): Promise<User | null> {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+      let isMounted = true;
+      let intervalId: NodeJS.Timeout;
+
       const fetchSession = async () => {
         try {
-          setIsPending(true);
-        const session = await getSession();
-        setData(session);
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch session');
-        setData(null);
-      } finally {
-        setIsPending(false);
-      }
-    };
+          // Only show loading state on first load, not during background polling
+          if (!data && isPending) setIsPending(true);
+          
+          const session = await getSession();
+          
+          if (isMounted) {
+            setData(session);
+            setError(null);
+            
+            // If we have a session, polling is fine. If not (session is null which means 401/error handled), 
+            // we should probably stop polling or poll less frequently to avoid spamming 401s.
+            // But for now, let's just keep polling if we have a session.
+            if (!session) {
+                 // Stop polling if not authenticated to avoid 401 spam
+                 clearInterval(intervalId);
+            }
+          }
+        } catch (err) {
+          if (isMounted) {
+            setError(err instanceof Error ? err.message : 'Failed to fetch session');
+            setData(null);
+            // Stop polling on error
+            clearInterval(intervalId);
+          }
+        } finally {
+          if (isMounted) setIsPending(false);
+        }
+      };
 
-    fetchSession();
+      fetchSession();
 
-    // Optionally poll for session changes every 30 seconds
-    const interval = setInterval(fetchSession, 30000);
-    return () => clearInterval(interval);
-  }, []);
+      // Poll every 60 seconds, but only if we had a session previously (to keep it fresh)
+      // or if we want to check for session expiry.
+      // However, to fix the loop, we'll start the interval only. The fetchSession logic will kill it if needed.
+      intervalId = setInterval(fetchSession, 60000); 
 
-  return { data, isPending, error };
-}
+      return () => {
+        isMounted = false;
+        clearInterval(intervalId);
+      };
+    }, []); // Empty dependency array means this runs once on mount
+
+    return { data, isPending, error };
+  }

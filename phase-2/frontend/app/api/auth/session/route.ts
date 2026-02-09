@@ -17,16 +17,39 @@ export async function GET(request: Request) {
       headers['Authorization'] = authHeader;
     }
 
+    // ... inside GET ...
+    // Forward Cookie header if present (important for session!)
+    const cookieHeader = request.headers.get('cookie');
+    if (cookieHeader) {
+      headers['Cookie'] = cookieHeader;
+    }
+
     const response = await fetch(`${BACKEND_URL}/api/auth/session`, {
       method: 'GET',
       headers,
+      credentials: 'include',
     });
 
-    const data = await response.json();
+    let data;
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+        // If backend returns 401 with no body or text body, handled here
+        data = null; 
+    }
     
+    // If backend returns 200, we expect data. If 401, data might be { detail: ... } or null.
+    
+    const responseHeaders = new Headers();
+    responseHeaders.set('Content-Type', 'application/json');
+    if (response.headers.get('set-cookie')) {
+        responseHeaders.set('Set-Cookie', response.headers.get('set-cookie')!);
+    }
+
     return new Response(JSON.stringify(data), {
       status: response.status,
-      headers: { 'Content-Type': 'application/json' },
+      headers: responseHeaders,
     });
   } catch (error) {
     return new Response(
