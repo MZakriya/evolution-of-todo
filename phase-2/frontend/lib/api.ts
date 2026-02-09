@@ -15,6 +15,7 @@ interface Task {
 // API client function that can be used in client components
 export async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+  console.log('API Request to:', backendUrl + endpoint); // DEBUG: Check URL
 
   // Get the JWT token from the session
   const token = await getToken();
