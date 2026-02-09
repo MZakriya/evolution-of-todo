@@ -17,7 +17,10 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    init_db()
+    try:
+        init_db()
+    except Exception as e:
+        print(f"Database initialization failed: {e}")
     yield
     # Shutdown
 
@@ -83,7 +86,24 @@ async def health_check(request: Request):
     """
     Health check endpoint - public endpoint
     """
-    return {"status": "healthy"}
+    from db import engine
+    from sqlalchemy import text
+    
+    db_status = "unknown"
+    error = None
+    
+    if engine:
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            db_status = "connected"
+        except Exception as e:
+            db_status = "error"
+            error = str(e)
+    else:
+        db_status = "not_configured"
+        
+    return {"status": "healthy", "database": db_status, "error": error}
 
 # Include API routes
 from routes import tasks, tags
