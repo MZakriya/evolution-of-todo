@@ -1,22 +1,34 @@
-import ClientProviders from '../components/ClientProviders';
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
 
-export const metadata = {
-  title: 'Todo App',
-  description: 'Manage your tasks efficiently',
-}
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+export const metadata: Metadata = {
+  title: "Todo App",
+  description: "Secure Todo application with Better Auth",
+};
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode
-}) {
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="en">
-      <body>
-        <ClientProviders>
-          {children}
-        </ClientProviders>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased max-w-7xl mx-auto px-4 sm:px-6 lg:px-8`}
+      >
+        {children}
       </body>
     </html>
-  )
+  );
 }
