@@ -1,8 +1,25 @@
 import sys
 import os
 
-# Add current directory to sys.path for Vercel
+# DEBUGGING VERCEL PATHS
+print(f"Current file: {__file__}")
+print(f"CWD: {os.getcwd()}")
+print(f"Directory contents: {os.listdir(os.path.dirname(os.path.abspath(__file__)))}")
+print(f"Sys Path: {sys.path}")
+
+# Add current directory to sys.path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+try:
+    from db import init_db
+except ImportError:
+    print("Failed 'from db import init_db', trying 'from backend.db import init_db'")
+    try:
+        from backend.db import init_db
+    except ImportError as e:
+        print(f"Failed both imports: {e}")
+        # Crash intentionally if both fail, but after printing debug info
+        raise e
 
 from fastapi import FastAPI, Request, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,7 +27,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-from db import init_db
+# from db import init_db  <-- REMOVED (moved up)
 import os
 import jwt
 from contextlib import asynccontextmanager
@@ -24,6 +41,7 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 async def lifespan(app: FastAPI):
     # Startup
     try:
+        # init_db is now imported at the top
         init_db()
     except Exception as e:
         print(f"Database initialization failed: {e}")
